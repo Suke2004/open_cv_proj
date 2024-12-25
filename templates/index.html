@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Object Detection and Data Extraction</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        .navbar {
+            background-color: #343a40;
+        }
+        .navbar .btn {
+            margin: 0 5px;
+        }
+        .container-fluid {
+            max-width: 1280px;
+        }
+        .content {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Object Detection</a>
+            <div class="d-flex">
+                <button id="toggle-detection" class="btn btn-success">Start Detection</button>
+                <label for="file-upload" class="btn btn-primary mb-0">Upload for Data Extraction</label>
+                <input id="file-upload" type="file" class="d-none" accept="image/*">
+            </div>
+        </div>
+    </nav>
+    <div class="container-fluid content">
+        <div class="row">
+            <div class="col-md-8">
+                <h3>Live Video Feed</h3>
+                <img id="video-feed" src="{{ url_for('video_feed') }}" class="img-fluid" alt="Live Video Feed">
+            </div>
+            <div class="col-md-4">
+                <h3>Detection Status</h3>
+                <p id="detection-status">Object detection is currently stopped.</p>
+                <h3>Data Extraction Result</h3>
+                <p id="data-extraction-result">No data extracted yet.</p>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script>
+        let detectionActive = false;
+
+        // Toggle object detection
+        $("#toggle-detection").on("click", function () {
+            detectionActive = !detectionActive;
+            const endpoint = detectionActive ? "/start_detection" : "/stop_detection";
+            const buttonText = detectionActive ? "Stop Detection" : "Start Detection";
+            const buttonClass = detectionActive ? "btn-danger" : "btn-success";
+            const statusText = detectionActive ? "Object detection is currently active." : "Object detection is currently stopped.";
+
+            $.post(endpoint, function (response) {
+                $("#toggle-detection").text(buttonText).removeClass("btn-success btn-danger").addClass(buttonClass);
+                $("#detection-status").text(statusText);
+            });
+        });
+
+        // Handle file upload for data extraction
+        $("#file-upload").on("change", function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("image", file);
+
+            $.ajax({
+                url: "/upload_image",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    const resultText = response.error
+                        ? `Error: ${response.error}`
+                        : `Manufacturing Date: ${response.manufacturing_date}<br>Expiry Date: ${response.expiry_date}`;
+                    $("#data-extraction-result").html(resultText);
+                },
+                error: function () {
+                    $("#data-extraction-result").text("Failed to extract data.");
+                },
+            });
+        });
+    </script>
+</body>
+</html>
